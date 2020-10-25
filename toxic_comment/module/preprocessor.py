@@ -2,6 +2,7 @@ import re
 import string
 import pandas as pd
 import numpy as np
+from tensorflow import keras
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -42,7 +43,7 @@ class Preprocessor(object):
     def _load_data(self):
         data_df = pd.read_csv(self.config['input_trainset'])
         data_df[self.config['input_text_column']].fillna("unknown", inplace=True)
-        data_df['none'] = 1 - data_df[self.classes].max(axis=1)
+        #data_df['none'] = 1 - data_df[self.classes].max(axis=1)
         self.data_x, self.data_y = self._parse(data_df)
         self.train_x, self.validate_x, self.train_y, self.validate_y = train_test_split(
                         self.data_x, self.data_y,
@@ -50,7 +51,7 @@ class Preprocessor(object):
                         random_state=self.config['random_seed'])
 
         # we don't need the added 'none' class for validation set
-        self.validate_y = np.delete(self.validate_y, -1, 1)
+        # self.validate_y = np.delete(self.validate_y, -1, 1)
 
         test_df = pd.read_csv(self.config['input_testset'])
         test_df[self.config['input_text_column']].fillna("unknown", inplace=True)
@@ -69,6 +70,9 @@ class Preprocessor(object):
         elif input_convertor == 'tfidf_vectorization':
             train_x, validate_x = self.tfidf_vectorization(train_x, validate_x)
             data_x, test_x = self.tfidf_vectorization(data_x, test_x)
+        elif input_convertor == 'nn_vectorization': # for neural network
+            train_x, validate_x, test_x = self.nn_vectorization(train_x, validate_x, test_x)
+            #data_x, test_x = self.nn_vectorization(data_x, test_x)
 
         return data_x, data_y, train_x, train_y, validate_x, validate_y, test_x
 
@@ -83,3 +87,49 @@ class Preprocessor(object):
         vectorized_train_x = vectorizer.fit_transform(train_x)
         vectorized_test_x  = vectorizer.transform(test_x)
         return vectorized_train_x, vectorized_test_x
+
+    def nn_vectorization(self, train_x, validate_x, test_x):
+        self.word2ind = {}
+        self.ind2word = {}
+
+        specialtokens = ['<pad>','<unk>']
+
+        def addword(word2ind,ind2word,word):
+            if word in word2ind:
+                return
+            ind2word[len(word2ind)] = word
+            word2ind[word] = len(word2ind)
+
+        for token in specialtokens:
+            addword(self.word2ind, self.ind2word, token)
+
+        for sent in train_x:
+            for word in sent:
+                addword(self.word2ind, self.ind2word, word)
+
+        train_x_ids = []
+        for sent in train_x:
+            indsent = [self.word2ind.get(i, self.word2ind['<unk>']) for i in sent]
+            train_x_ids.append(indsent)
+
+        train_x_ids = np.array(train_x_ids)
+
+        validate_x_ids = []
+        for sent in validate_x:
+            indsent = [self.word2ind.get(i, self.word2ind['<unk>']) for i in sent]
+            validate_x_ids.append(indsent)
+
+        validate_x_ids = np.array(validate_x_ids)
+
+        test_x_ids = []
+        for sent in test_x:
+            indsent = [self.word2ind.get(i, self.word2ind['<unk>']) for i in sent]
+            test_x_ids.append(indsent)
+
+        test_x_ids = np.array(test_x_ids)
+
+        train_x_ids = keras.preprocessing.sequence.pad_sequences(train_x_ids, maxlen=self.config['maxlen'], padding='post',value=self.word2ind['<pad>'])
+        validate_x_ids = keras.preprocessing.sequence.pad_sequences(validate_x_ids, maxlen=self.config['maxlen'], padding='post',value=self.word2ind['<pad>'])
+        test_x_ids = keras.preprocessing.sequence.pad_sequences(test_x_ids, maxlen=self.config['maxlen'], padding='post',value=self.word2ind['<pad>'])
+
+        return train_x_ids, validate_x_ids, test_x_ids

@@ -1,6 +1,6 @@
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
-from module.model import NaiveBayer
+from module.model import NaiveBayer, TextCNN
 
 class Trainer(object):
     def __init__(self, config, logger, classes):
@@ -12,6 +12,8 @@ class Trainer(object):
     def _create_model(self, classes):
         if self.config['model_name'] == 'naivebayse':
             self.model = NaiveBayer(classes)
+        elif self.config['model_name'] == 'textcnn':
+            self.model = TextCNN(classes, self.config)
         else:
             self.logger.warning("Model Type:{} is not support yet".format(self.config['model_name']))
 
@@ -27,3 +29,8 @@ class Trainer(object):
     def validate(self, validate_x, validate_y):
         predictions = self.model.predict(validate_x)
         return self.metrics(predictions, validate_y)
+
+    def fit_and_validate(self, train_x, train_y, validate_x, validate_y):
+        predictions, history = self.model.fit_and_validate(train_x, train_y, validate_x, validate_y)
+        accuracy, cls_report = self.metrics(predictions, validate_y)
+        return self.model, accuracy, cls_report, history

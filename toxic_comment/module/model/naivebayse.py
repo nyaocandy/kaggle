@@ -14,6 +14,10 @@ class NaiveBayer(object):
             class_labels = train_y[:,idx]
             self.models[cls].fit(train_x, class_labels)
 
+    def fit_and_validate(self, train_x, train_y, validate_x, validate_y):
+        self.fit(train_x, train_y)
+        return self.predict(validate_x), None
+
     def predict(self, test_x):
         predictions = np.zeros((test_x.shape[0], len(self.classes)))
         for idx, cls in enumerate(self.classes):
