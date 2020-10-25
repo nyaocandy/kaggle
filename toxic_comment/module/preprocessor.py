@@ -65,28 +65,30 @@ class Preprocessor(object):
                 self.validate_x, self.validate_y, self.test_x
 
         if input_convertor == 'count_vectorization':
-            train_x, validate_x = self.count_vectorization(train_x, validate_x)
-            data_x, test_x = self.count_vectorization(data_x, test_x)
+            train_x, validate_x, test_x= self.count_vectorization(train_x, validate_x, test_x)
+            #data_x, test_x = self.count_vectorization(data_x, test_x)
         elif input_convertor == 'tfidf_vectorization':
-            train_x, validate_x = self.tfidf_vectorization(train_x, validate_x)
-            data_x, test_x = self.tfidf_vectorization(data_x, test_x)
+            train_x, validate_x, test_x= self.tfidf_vectorization(train_x, validate_x, test_x)
+            #data_x, test_x = self.tfidf_vectorization(data_x, test_x)
         elif input_convertor == 'nn_vectorization': # for neural network
             train_x, validate_x, test_x = self.nn_vectorization(train_x, validate_x, test_x)
             #data_x, test_x = self.nn_vectorization(data_x, test_x)
 
         return data_x, data_y, train_x, train_y, validate_x, validate_y, test_x
 
-    def count_vectorization(self, train_x, test_x):
+    def count_vectorization(self, train_x, validate_x, test_x):
         vectorizer = CountVectorizer(tokenizer=lambda x:x, preprocessor=lambda x:x)
         vectorized_train_x = vectorizer.fit_transform(train_x)
+        vectorized_validate_x = vectorizer.transform(validate_x)
         vectorized_test_x  = vectorizer.transform(test_x)
-        return vectorized_train_x, vectorized_test_x
+        return vectorized_train_x, vectorized_validate_x, vectorized_test_x
 
-    def tfidf_vectorization(self, train_x, test_x):
+    def tfidf_vectorization(self, train_x, validate_x, test_x):
         vectorizer = TfidfVectorizer(tokenizer=lambda x:x, preprocessor=lambda x:x)
         vectorized_train_x = vectorizer.fit_transform(train_x)
+        vectorized_validate_x  = vectorizer.transform(validate_x)
         vectorized_test_x  = vectorizer.transform(test_x)
-        return vectorized_train_x, vectorized_test_x
+        return vectorized_train_x, vectorized_validate_x, vectorized_test_x
 
     def nn_vectorization(self, train_x, validate_x, test_x):
         self.word2ind = {}
